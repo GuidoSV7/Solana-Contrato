@@ -1,99 +1,127 @@
 {
-  "address": "6R5q6P5975rhYg2KXaGLPjysYBtMHGwqBajmYDJLwVih",
-  "metadata": {
-    "name": "trustpay",
     "version": "0.1.0",
-    "spec": "0.1.0",
-    "description": "TrustPay Business PDA"
-  },
-  "instructions": [
-    {
-      "name": "registrar_negocio",
-      "discriminator": [0, 0, 0, 0, 0, 0, 0, 0],
-      "accounts": [
-        {
-          "name": "authority",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "owner"
-        },
-        {
-          "name": "business_pda",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              { "kind": "const", "value": [98, 117, 115, 105, 110, 101, 115, 115] },
-              { "kind": "account", "path": "owner" }
-            ]
-          }
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        { "name": "business_id", "type": "string" }
-      ]
-    },
-    {
-      "name": "verificar_negocio",
-      "discriminator": [0, 0, 0, 0, 0, 0, 0, 0],
-      "accounts": [
-        {
-          "name": "authority",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "owner"
-        },
-        {
-          "name": "business_pda",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              { "kind": "const", "value": [98, 117, 115, 105, 110, 101, 115, 115] },
-              { "kind": "account", "path": "owner" }
-            ]
-          }
-        }
-      ],
-      "args": []
-    }
-  ],
-  "accounts": [
-    {
-      "name": "BusinessPda",
-      "discriminator": [0, 0, 0, 0, 0, 0, 0, 0]
-    }
-  ],
-  "errors": [
-    {
-      "code": 6000,
-      "name": "NoAutorizado",
-      "msg": "Error: solo TrustPay puede verificar negocios"
-    },
-    {
-      "code": 6001,
-      "name": "YaVerificado",
-      "msg": "Error: este negocio ya fue verificado"
-    }
-  ],
-  "types": [
-    {
-      "name": "BusinessPda",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          { "name": "owner", "type": "pubkey" },
-          { "name": "business_id", "type": "string" },
-          { "name": "is_verified", "type": "bool" },
-          { "name": "bump", "type": "u8" }
+    "name": "trustpay",
+    "instructions": [
+      {
+        "name": "registrarNegocio",
+        "accounts": [
+          { "name": "authority", "isMut": true, "isSigner": true },
+          { "name": "owner", "isMut": false, "isSigner": false },
+          { "name": "businessPda", "isMut": true, "isSigner": false },
+          { "name": "systemProgram", "isMut": false, "isSigner": false }
+        ],
+        "args": [{ "name": "businessId", "type": "string" }]
+      },
+      {
+        "name": "verificarNegocio",
+        "accounts": [
+          { "name": "authority", "isMut": true, "isSigner": true },
+          { "name": "owner", "isMut": false, "isSigner": false },
+          { "name": "businessPda", "isMut": true, "isSigner": false }
+        ],
+        "args": []
+      },
+      {
+        "name": "crearEscrow",
+        "accounts": [
+          { "name": "buyer", "isMut": true, "isSigner": true },
+          { "name": "seller", "isMut": false, "isSigner": false },
+          { "name": "escrowPda", "isMut": true, "isSigner": false },
+          { "name": "systemProgram", "isMut": false, "isSigner": false }
+        ],
+        "args": [
+          { "name": "transactionId", "type": "string" },
+          { "name": "amount", "type": "u64" }
         ]
+      },
+      {
+        "name": "liberarEscrow",
+        "accounts": [
+          { "name": "buyer", "isMut": true, "isSigner": true },
+          { "name": "seller", "isMut": true, "isSigner": false },
+          { "name": "escrowPda", "isMut": true, "isSigner": false }
+        ],
+        "args": []
+      },
+      {
+        "name": "reembolsarEscrow",
+        "accounts": [
+          { "name": "authority", "isMut": true, "isSigner": true },
+          { "name": "buyer", "isMut": true, "isSigner": false },
+          { "name": "escrowPda", "isMut": true, "isSigner": false }
+        ],
+        "args": []
+      },
+      {
+        "name": "cerrarEscrow",
+        "accounts": [
+          { "name": "authority", "isMut": true, "isSigner": true },
+          { "name": "escrowPda", "isMut": true, "isSigner": false }
+        ],
+        "args": []
       }
-    }
-  ]
-}
+    ],
+    "accounts": [
+      {
+        "name": "BusinessPda",
+        "type": {
+          "kind": "struct",
+          "fields": [
+            { "name": "owner", "type": "publicKey" },
+            { "name": "businessId", "type": "string" },
+            { "name": "isVerified", "type": "bool" },
+            { "name": "bump", "type": "u8" }
+          ]
+        }
+      },
+      {
+        "name": "EscrowPda",
+        "type": {
+          "kind": "struct",
+          "fields": [
+            { "name": "buyer", "type": "publicKey" },
+            { "name": "seller", "type": "publicKey" },
+            { "name": "amount", "type": "u64" },
+            { "name": "status", "type": "u8" },
+            { "name": "transactionId", "type": "string" },
+            { "name": "bump", "type": "u8" }
+          ]
+        }
+      }
+    ],
+    "types": [
+      {
+        "name": "BusinessPda",
+        "type": {
+          "kind": "struct",
+          "fields": [
+            { "name": "owner", "type": "publicKey" },
+            { "name": "businessId", "type": "string" },
+            { "name": "isVerified", "type": "bool" },
+            { "name": "bump", "type": "u8" }
+          ]
+        }
+      },
+      {
+        "name": "EscrowPda",
+        "type": {
+          "kind": "struct",
+          "fields": [
+            { "name": "buyer", "type": "publicKey" },
+            { "name": "seller", "type": "publicKey" },
+            { "name": "amount", "type": "u64" },
+            { "name": "status", "type": "u8" },
+            { "name": "transactionId", "type": "string" },
+            { "name": "bump", "type": "u8" }
+          ]
+        }
+      }
+    ],
+    "errors": [
+      { "code": 6000, "name": "NoAutorizado", "msg": "Error: solo TrustPay puede realizar esta acción" },
+      { "code": 6001, "name": "YaVerificado", "msg": "Error: este negocio ya fue verificado" },
+      { "code": 6002, "name": "EstadoInvalido", "msg": "Error: el escrow no está en estado LOCKED" },
+      { "code": 6003, "name": "NoAutorizadoReembolso", "msg": "Error: solo TrustPay puede reembolsar el escrow" },
+      { "code": 6004, "name": "NoSePuedeCerrar", "msg": "Error: el escrow debe estar RELEASED o REFUNDED para cerrarse" }
+    ]
+  }

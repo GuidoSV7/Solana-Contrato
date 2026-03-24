@@ -1,7 +1,8 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::hash::hash;
 use anchor_lang::system_program;
 
-declare_id!("6R5q6P5975rhYg2KXaGLPjysYBtMHGwqBajmYDJLwVih");
+declare_id!("uFs8SSGeoPR3rw5SfxKBZNp7e4PdieGENtoVKrwRGHA");
 
 const TRUSTPAY_AUTHORITY: [u8; 32] = [
     191, 42, 247, 41, 178, 96, 177, 17, 50, 163, 79, 51, 237, 228, 158, 144, 208, 6, 65, 101, 145,
@@ -37,7 +38,7 @@ pub mod trustpay {
     }
 
     //////////////////////////// Instrucción: Verificar Negocio ////////////////////////////
-    pub fn verificar_negocio(ctx: Context<VerificarNegocio>) -> Result<()> {
+    pub fn verificar_negocio(ctx: Context<VerificarNegocio>, business_id: String) -> Result<()> {
         require!(
             ctx.accounts.authority.key().to_bytes() == TRUSTPAY_AUTHORITY,
             Errores::NoAutorizado
@@ -46,6 +47,11 @@ pub mod trustpay {
         let business = &mut ctx.accounts.business_pda;
 
         require!(!business.is_verified, Errores::YaVerificado);
+
+        require!(
+            business.business_id == business_id,
+            Errores::BusinessIdNoCoincide
+        );
 
         business.is_verified = true;
 
@@ -189,6 +195,9 @@ pub enum Errores {
 
     #[msg("Error: el escrow debe estar RELEASED o REFUNDED para cerrarse")]
     NoSePuedeCerrar,
+
+    #[msg("Error: el business_id no coincide con la cuenta on-chain")]
+    BusinessIdNoCoincide,
 }
 
 // ==============================
@@ -238,11 +247,16 @@ pub struct RegistrarNegocio<'info> {
     /// CHECK: wallet del merchant — solo se usa como semilla de la PDA
     pub owner: AccountInfo<'info>,
 
+    /// Una PDA por par (owner, business_id): permite varios negocios con la misma wallet.
     #[account(
         init,
         payer = authority,
         space = BusinessPda::INIT_SPACE + 8,
-        seeds = [b"business", owner.key().as_ref()],
+        seeds = [
+            b"business",
+            owner.key().as_ref(),
+            hash(business_id.as_bytes()).as_ref(),
+        ],
         bump
     )]
     pub business_pda: Account<'info, BusinessPda>,
@@ -251,6 +265,7 @@ pub struct RegistrarNegocio<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(business_id: String)]
 pub struct VerificarNegocio<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
@@ -260,7 +275,11 @@ pub struct VerificarNegocio<'info> {
 
     #[account(
         mut,
-        seeds = [b"business", owner.key().as_ref()],
+        seeds = [
+            b"business",
+            owner.key().as_ref(),
+            hash(business_id.as_bytes()).as_ref(),
+        ],
         bump = business_pda.bump
     )]
     pub business_pda: Account<'info, BusinessPda>,

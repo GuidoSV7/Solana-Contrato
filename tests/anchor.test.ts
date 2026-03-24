@@ -11,8 +11,14 @@ describe("Business PDA", () => {
   // Wallet del merchant — no firma, solo se usa como semilla
   const merchant = web3.Keypair.generate();
 
+  // Misma derivación que el contrato: seeds = ["business", owner, sha256(utf8(business_id))]
+  const crypto = require("crypto");
+  const businessIdSeed = crypto
+    .createHash("sha256")
+    .update(businessId, "utf8")
+    .digest();
   const [businessPda] = web3.PublicKey.findProgramAddressSync(
-    [Buffer.from("business"), merchant.publicKey.toBuffer()],
+    [Buffer.from("business"), merchant.publicKey.toBuffer(), businessIdSeed],
     pg.program.programId
   );
 
@@ -44,7 +50,7 @@ describe("Business PDA", () => {
 
   it("verificar_negocio: cambia is_verified a true", async () => {
     const tx = await pg.program.methods
-      .verificarNegocio()
+      .verificarNegocio(businessId)
       .accounts({
         authority: pg.wallet.publicKey,
         owner: merchant.publicKey,
@@ -64,7 +70,7 @@ describe("Business PDA", () => {
   it("verificar_negocio: falla si el negocio ya está verificado", async () => {
     try {
       await pg.program.methods
-        .verificarNegocio()
+        .verificarNegocio(businessId)
         .accounts({
           authority: pg.wallet.publicKey,
           owner: merchant.publicKey,
